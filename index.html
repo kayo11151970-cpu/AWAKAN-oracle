@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#edf1e8">
+<title>AWAKEN — カードを1枚引く</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100svh;background:radial-gradient(ellipse at top,#e3eadc,transparent 70%),#f8f9f4;color:#344c43;font-family:'Yu Mincho','Hiragino Mincho ProN',serif;display:grid;place-items:center;padding:24px}main{width:100%;max-width:440px;text-align:center;padding:38px 24px;border:1px solid #a58a5140;border-radius:12px;background:#ffffff70}header{font:26px Georgia,serif;letter-spacing:7px}header small{display:block;font:9px Arial,sans-serif;letter-spacing:3px;margin-top:12px;color:#816b3d}h1{font-size:22px;font-weight:400;line-height:1.8;margin-top:36px}p{font-size:13px;line-height:2;color:#61705f}.result{margin:28px auto;min-height:164px;display:grid;align-content:center;border-top:1px solid #a58a5140;border-bottom:1px solid #a58a5140}.result span{font-size:12px;letter-spacing:2px;color:#816b3d}output{display:block;font:64px Georgia,serif;color:#816b3d;margin:10px 0}button{width:100%;min-height:54px;border:1px solid #a58a5170;border-radius:3px;background:linear-gradient(120deg,#a68c53,#89713e);color:#fffdf3;font:16px serif;letter-spacing:1px;cursor:pointer;padding:15px}button:focus-visible{outline:3px solid #344c43;outline-offset:4px}.note{font-size:11px;margin-top:20px}#status{min-height:2em;font-size:12px;margin-bottom:0}
+</style>
+</head>
+<body><main><header>AWAKEN<small>ORACLE CARDS</small></header><h1>今のあなたへ、一枚を。</h1><p>心を落ち着けて、ボタンを押してください。</p><div class="result"><span>あなたのカード番号</span><output id="number" aria-label="選ばれたカード番号">—</output></div><button id="draw" type="button">カードを1枚引く</button><p id="status" role="status" aria-live="polite">1〜44の中からランダムに選びます。</p><p class="note">何度でも引けます。同じ番号が続くこともあります。</p></main>
+<script>
+// Rejection sampling keeps all 44 outcomes equally likely.
+function drawNumber(){
+ const limit=Math.floor(4294967296/44)*44;
+ const values=new Uint32Array(1);
+ do{crypto.getRandomValues(values);}while(values[0]>=limit);
+ return values[0]%44+1;
+}
+document.getElementById('draw').addEventListener('click',()=>{
+ try{
+  const number=drawNumber();
+  document.getElementById('number').textContent=String(number);
+  document.getElementById('status').textContent=`${number}番のカードが選ばれました。`;
+ }catch{
+  document.getElementById('status').textContent='抽選できませんでした。ブラウザーを更新して、もう一度お試しください。';
+ }
+});
+</script></body></html>
