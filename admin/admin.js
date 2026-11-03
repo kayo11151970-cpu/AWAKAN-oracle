@@ -29,7 +29,7 @@ function controls(){
  const active=target&&['subscriber_ready','subscriber_waiting'].includes(target.state);
  $('search').disabled=busy;$('customer-email').disabled=busy;
  $('activate').disabled=busy||!target?.email_confirmed||(active&&!target.membership_expires_at);
- $('end-month').disabled=busy||!target?.email_confirmed||!active||Boolean(target?.membership_expires_at);
+ $('end-month').disabled=busy||!target?.email_confirmed||!active||Boolean(target?.membership_expires_at&&target.membership_end_source!=='customer');
  $('activate').textContent=active?(target.membership_expires_at?'終了予約を取り消す':'会員です'):'会員にする';
 }
 function render(data){
@@ -40,6 +40,7 @@ function render(data){
   $('email-confirmed').textContent=target.email_confirmed?'確認済み':'未確認（先にメール確認が必要です）';
   $('next-draw').textContent=target.can_draw?'今すぐ利用できます':date(target.next_available_at);
   $('last-draw').textContent=date(target.last_draw_at);
+  $('end-source').textContent=target.membership_expires_at?(target.membership_end_source==='customer'?'お客様ご自身':'管理者'):'—';
   $('end-date').textContent=target.membership_expires_at?date(target.membership_expires_at)+' から利用不可':'終了予約なし';
  }
  controls();
@@ -56,7 +57,7 @@ async function change(action){
  if(busy||!target)return;
  const current=target;
  const continuing=['subscriber_ready','subscriber_waiting'].includes(current.state);
- const description=action==='end_month'?'日本時間の今月末まで利用でき、翌月1日0時に会員資格が終了します。7日間隔は変わりません。':continuing?'月末終了の予約を取り消します。利用回数は増えません。':'入金を確認しましたか？ 会員にするとすぐ1回引け、その後は前回から7日ごとに利用できます。';
+ const description=action==='end_month'?'日本時間の今月末まで利用でき、翌月1日0時に会員資格が終了します。7日間隔は変わりません。この管理者の終了予約は、お客様からは取り消せなくなります。':continuing?'月末終了の予約を取り消します。利用回数は増えません。':'入金を確認しましたか？ 会員にするとすぐ1回引け、その後は前回から7日ごとに利用できます。';
  if(!window.confirm(current.email+'\n\n'+description))return;
  busy=true;controls();$('message').textContent='変更しています…';
  try{const data=await rpc('awaken_admin_change',{p_user_id:current.user_id,p_action:action});render(data);$('message').textContent=action==='end_month'?'月末で終了する予約を保存しました。':'会員情報を保存しました。お客様はAWAKENを再読み込みすると確認できます。';}

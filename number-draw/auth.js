@@ -4,7 +4,7 @@ const publishableKey='sb_publishable_L29n6t4Rw-_THcwQQRBNaw_5D78IwDK';
 const redirectUrl='https://kayo11151970-cpu.github.io/AWAKAN-oracle/';
 const sessionKey='awaken-auth-v1';
 const el=id=>document.getElementById(id);
-let session=null,user=null,busy=false,refreshing=null,authGeneration=0;
+let session=null,user=null,busy=false,refreshing=null,authGeneration=0,memberState=null;
 function saveSession(value){session=value;try{if(value)localStorage.setItem(sessionKey,JSON.stringify(value));else localStorage.removeItem(sessionKey);}catch{}}
 function normalizedSession(data){return {access_token:data.access_token,refresh_token:data.refresh_token,expires_at:data.expires_at||Math.floor(Date.now()/1000)+Number(data.expires_in||3600)};}
 async function request(path,{method='GET',body,token}={}){
@@ -20,7 +20,7 @@ async function accessToken(){
  return refreshing;
 }
 function hideResult(){el('card-image').hidden=true;el('details').hidden=true;el('number').textContent='—';}
-function loggedOut(){authGeneration++;if(el('admin-link'))el('admin-link').hidden=true;user=null;saveSession(null);hideResult();el('login-form').hidden=false;el('account').hidden=true;el('draw').disabled=true;el('status').textContent='メールでログインしてからカードを引いてください。';}
+function loggedOut(){authGeneration++;memberState=null;if(el('membership-actions'))el('membership-actions').hidden=true;if(el('admin-link'))el('admin-link').hidden=true;user=null;saveSession(null);hideResult();el('login-form').hidden=false;el('account').hidden=true;el('draw').disabled=true;el('status').textContent='メールでログインしてからカードを引いてください。';}
 function dateLabel(value){return new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',dateStyle:'medium',timeStyle:'short'}).format(new Date(value))+'（日本時間）';}
 async function showCard(number,generation=authGeneration){
  if(!Number.isInteger(number)||number<1||number>44)throw new Error('INVALID_CARD');
@@ -42,7 +42,11 @@ async function loadMembership(){
   member.state=member.membership==='disabled'?'disabled':member.membership==='subscriber'?(next&&Date.now()<next?'subscriber_waiting':'subscriber_ready'):(member.trial_used?'trial_used':'trial_ready');
   member.can_draw=['trial_ready','subscriber_ready'].includes(member.state);member.next_available_at=next;
  }
+ await renderMembership(member,generation);
+}
+async function renderMembership(member,generation=authGeneration){
  if(generation!==authGeneration)return;
+ memberState=member;renderCancellation(member);
  if(member.state==='disabled'){hideResult();el('draw').disabled=true;el('status').textContent='現在、このアカウントでは利用できません。管理者にお問い合わせください。';return;}
  if(member.last_card_number)await showCard(member.last_card_number,generation);
  if(generation!==authGeneration)return;
@@ -51,6 +55,55 @@ async function loadMembership(){
  el('status').textContent=states[member.state]||'利用状況を確認できませんでした。';
  if(member.membership_expires_at&&member.state!=='expired')el('status').textContent+=' 会員資格は '+dateLabel(member.membership_expires_at)+' に終了します。';
 }
+function cancellationButtons(){
+ if(!el('request-cancellation'))return;
+ el('request-cancellation').disabled=busy||memberState?.can_request_cancellation!==true;
+ el('undo-cancellation').disabled=busy||memberState?.can_cancel_cancellation!==true;
+}
+function renderCancellation(member){
+ if(!el('membership-actions'))return;
+ // Remain hidden until the additive backend migration is installed.
+ const supported=Object.hasOwn(member,'can_request_cancellation');
+ el('membership-actions').hidden=!supported||member.membership!=='subscriber'||member.state==='disabled';
+ if(el('membership-actions').hidden)return;
+ el('request-cancellation').hidden=member.can_request_cancellation!==true;
+ el('undo-cancellation').hidden=member.can_cancel_cancellation!==true;
+ el('cancellation-feedback').textContent='';
+ if(member.state==='expired')el('cancellation-status').textContent='会員資格は終了しています。再入会は管理者の入金確認後のお手続きになります。';
+ else if(member.membership_expires_at){
+  const source=member.membership_end_source==='customer'?'お客様ご自身の退会予約です。月末前なら取り消せます。':'管理者が設定した終了予約です。お客様からは取り消せません。';
+  el('cancellation-status').textContent='会員資格の終了日時：'+dateLabel(member.membership_expires_at)+'。'+source;
+ }else el('cancellation-status').textContent='退会を予約すると、今月末まで7日間隔で利用でき、翌月1日0時（日本時間）に会員資格が終了します。';
+ cancellationButtons();
+}
+async function selfCancellation(action){
+ if(busy||!user||!memberState)return;
+ const generation=authGeneration;
+ const allowed=action==='request'?memberState.can_request_cancellation:memberState.can_cancel_cancellation;
+ if(allowed!==true)return;
+ const expected=memberState.cancellation_effective_at||memberState.membership_expires_at;
+ if(!expected)return;
+ const confirmation=action==='request'?'会員資格を '+dateLabel(expected)+' に終了する予約をします。それまでは7日間隔で利用できます。\n\nこの操作では決済サービスの継続課金は停止されません。必要な場合は決済先でも解約してください。':'退会予約を取り消して会員を継続します。引ける回数や次回日時は変わりません。決済サービスの契約は変更されません。';
+ if(!window.confirm(confirmation))return;
+ busy=true;el('draw').disabled=true;cancellationButtons();el('cancellation-feedback').textContent='手続きしています…';
+ try{
+  const token=await accessToken();
+  const result=await request('/rest/v1/rpc/awaken_self_cancellation',{method:'POST',body:{p_action:action,p_expected_end_at:expected},token});
+  if(generation!==authGeneration)return;
+  await renderMembership(result,generation);
+  if(generation!==authGeneration)return;
+  el('cancellation-feedback').textContent=action==='request'?'退会予約を受け付けました。':'退会予約を取り消しました。';
+ }catch(error){
+  if(generation!==authGeneration)return;
+  // Read back state without retrying a mutation after an uncertain response.
+  try{await loadMembership();}catch{memberState=null;el('draw').disabled=true;}
+  if(generation!==authGeneration)return;
+  const text=error.message||'';
+  el('cancellation-feedback').textContent=text.includes('ADMIN_CANCELLATION_LOCKED')?'管理者が設定した終了予約は、お客様からは取り消せません。':text.includes('CANCELLATION_DATE_CHANGED')?'月または予約内容が変わりました。最新の終了日時を確認して、もう一度お手続きください。':text.includes('MEMBERSHIP_EXPIRED')?'会員資格の終了後は取り消せません。再入会は管理者にお問い合わせください。':'結果を確認できませんでした。画面を再読み込みして予約状況を確認してください。';
+ }finally{busy=false;cancellationButtons();}
+}
+if(el('request-cancellation'))el('request-cancellation').addEventListener('click',()=>selfCancellation('request'));
+if(el('undo-cancellation'))el('undo-cancellation').addEventListener('click',()=>selfCancellation('undo'));
 async function loadAdminLink(){
  if(!el('admin-link'))return;
  const generation=authGeneration;el('admin-link').hidden=true;
@@ -95,7 +148,7 @@ el('logout').addEventListener('click',async()=>{
  const token=session?.access_token;loggedOut();if(token)try{await request('/auth/v1/logout',{method:'POST',token});}catch{}
 });
 el('draw').addEventListener('click',async()=>{
- if(busy||!user)return;const generation=authGeneration;busy=true;el('draw').disabled=true;el('status').textContent='カードを選んでいます…';
+ if(busy||!user)return;const generation=authGeneration;busy=true;el('draw').disabled=true;cancellationButtons();el('status').textContent='カードを選んでいます…';
  try{
   const token=await accessToken();
   const result=await request('/rest/v1/rpc/awaken_draw',{method:'POST',body:{},token});
@@ -108,7 +161,7 @@ el('draw').addEventListener('click',async()=>{
   if(generation!==authGeneration)return;
   el('status').textContent=explain(error);
   if(error.status===401){loggedOut();el('login-status').textContent=explain(error);}
- }finally{busy=false;}
+ }finally{busy=false;cancellationButtons();}
 });
 async function initialize(){
  el('draw').disabled=true;
@@ -131,6 +184,6 @@ async function initialize(){
   }else if(!session){loggedOut();}else{el('status').textContent=explain(error);}
  }
 }
-window.addEventListener('storage',event=>{if(event.key===sessionKey){authGeneration++;user=null;session=null;hideResult();el('draw').disabled=true;if(el('admin-link'))el('admin-link').hidden=true;initialize();}});
+window.addEventListener('storage',event=>{if(event.key===sessionKey){authGeneration++;user=null;session=null;memberState=null;if(el('membership-actions'))el('membership-actions').hidden=true;hideResult();el('draw').disabled=true;if(el('admin-link'))el('admin-link').hidden=true;initialize();}});
 window.addEventListener('hashchange',()=>{if(location.hash)initialize();});
 initialize();
