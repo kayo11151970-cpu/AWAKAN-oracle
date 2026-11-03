@@ -66,12 +66,29 @@ function explain(error){
  if(text.includes('LOGIN_REQUIRED')||error.status===401)return 'ログインの有効期限が切れました。ログインし直してください。';
  return '通信または設定の確認が必要です。画面を再読み込みして利用状況を確認してください。';
 }
+function emailErrorMessage(error){
+ const code=error.code;
+ const reasons={
+  over_email_send_rate_limit:'認証メールの送信回数がSupabaseの上限に達しています。続けて送信せず、送信制限の設定を確認してください。',
+  over_request_rate_limit:'短時間のリクエスト上限に達しています。少し時間を空けてください。',
+  email_address_not_authorized:'現在の送信サービスでは、このメールアドレスへの送信が許可されていません。管理者による送信元設定の確認が必要です。',
+  email_provider_disabled:'Supabaseのメール認証が無効になっています。管理者による設定の確認が必要です。',
+  signup_disabled:'新規登録が無効になっています。初めて利用する方は管理者にお問い合わせください。',
+  email_address_invalid:'メールアドレスが正しいか確認してください。',
+  email_send_failed:'認証メールの送信処理に失敗しました。管理者によるメール送信元・認証ログの確認が必要です。',
+  unexpected_failure:'認証サービスで送信処理に失敗しました。管理者による認証ログ・送信元設定の確認が必要です。'
+ };
+ if(Object.hasOwn(reasons,code))return reasons[code]+'（確認コード：'+code+'）';
+ if(error.status===429)return '認証サービスの送信制限に達しています。続けて送信せず、少し時間を空けてください。（HTTP 429）';
+ if(Number.isInteger(error.status)&&error.status>=400&&error.status<=599)return 'メールを送信できませんでした。管理者に次の番号をお知らせください。（HTTP '+error.status+'）';
+ return '認証サービスに通信できませんでした。インターネット接続を確認し、少し待ってからお試しください。';
+}
 el('login-form').addEventListener('submit',async event=>{
  event.preventDefault();el('send-link').disabled=true;el('login-status').textContent='ログインメールを送信しています…';
  try{
   await request('/auth/v1/otp?redirect_to='+encodeURIComponent(redirectUrl),{method:'POST',body:{email:el('email').value.trim(),create_user:true}});
   el('login-status').textContent='確認用メールを送信しました。メール内のリンクを開くと、登録・ログインが完了します。';
- }catch{el('login-status').textContent='メールを送信できませんでした。登録アドレス・送信設定をご確認のうえ、少し待ってからお試しください。';}
+ }catch(error){el('login-status').textContent=emailErrorMessage(error);}
  finally{el('send-link').disabled=false;}
 });
 el('logout').addEventListener('click',async()=>{

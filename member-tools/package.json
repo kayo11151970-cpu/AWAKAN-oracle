@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test database.test.js",
+    "test": "node --test database.test.js email-errors.test.js",
     "test:ui": "node ui-check.mjs"
   },
   "devDependencies": {
