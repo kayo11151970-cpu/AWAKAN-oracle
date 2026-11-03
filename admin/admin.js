@@ -1,0 +1,80 @@
+const API='https://mmfsavdfiskhvypkrjnb.supabase.co';
+const KEY='sb_publishable_L29n6t4Rw-_THcwQQRBNaw_5D78IwDK';
+const STORAGE='awaken-auth-v1';
+const $=id=>document.getElementById(id);
+let session=null,target=null,busy=false,revision=0,refreshing=null;
+const messages={trial_ready:'無料体験・未使用',trial_used:'無料体験・利用済み',subscriber_ready:'会員・今すぐ利用可能',subscriber_waiting:'会員・次回利用待ち',expired:'会員資格終了',disabled:'利用停止中'};
+function date(value){return value?new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',dateStyle:'medium',timeStyle:'short'}).format(new Date(value))+'（日本時間）':'—';}
+function deny(message){revision++;target=null;$('manager').hidden=true;$('customer').hidden=true;$('gate').hidden=false;$('gate-message').textContent=message;}
+async function call(path,{body,token,method='POST'}={}){
+ const response=await fetch(API+path,{method,headers:{apikey:KEY,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},...(body!==undefined?{body:JSON.stringify(body)}:{})});
+ const data=await response.json().catch(()=>null);
+ if(!response.ok){const error=new Error(data?.message||data?.msg||'REQUEST_FAILED');error.status=response.status;throw error;}return data;
+}
+async function token(){
+ if(!session)throw new Error('LOGIN_REQUIRED');
+ if(session.expires_at*1000>Date.now()+60000)return session.access_token;
+ if(!refreshing)refreshing=call('/auth/v1/token?grant_type=refresh_token',{body:{refresh_token:session.refresh_token}}).then(data=>{session={access_token:data.access_token,refresh_token:data.refresh_token,expires_at:data.expires_at||Math.floor(Date.now()/1000)+data.expires_in};try{localStorage.setItem(STORAGE,JSON.stringify(session));}catch{}return session.access_token;}).finally(()=>refreshing=null);
+ return refreshing;
+}
+async function rpc(name,body={}){return call('/rest/v1/rpc/'+name,{body,token:await token()});}
+function feedback(error){
+ if(error.status===401||error.message.includes('LOGIN_REQUIRED')){deny('ログインの期限が切れました。AWAKENでログインし直してください。');return 'ログインし直してください。';}
+ if(error.message.includes('ADMIN_REQUIRED')){deny('このアカウントには管理権限がありません。');return '管理権限がありません。';}
+ if(error.message.includes('EMAIL_NOT_CONFIRMED'))return 'お客様のメール確認が完了していません。先にログインメールで確認してもらってください。';
+ if(error.message.includes('NOT_ACTIVE_SUBSCRIBER'))return '現在は有効な会員ではありません。メールアドレスを検索し直してください。';
+ return '処理結果を確認できませんでした。検索し直して現在の状態を確認してください。';
+}
+function controls(){
+ const active=target&&['subscriber_ready','subscriber_waiting'].includes(target.state);
+ $('search').disabled=busy;$('customer-email').disabled=busy;
+ $('activate').disabled=busy||!target?.email_confirmed||(active&&!target.membership_expires_at);
+ $('end-month').disabled=busy||!target?.email_confirmed||!active||Boolean(target?.membership_expires_at);
+ $('activate').textContent=active?(target.membership_expires_at?'終了予約を取り消す':'会員です'):'会員にする';
+}
+function render(data){
+ target=data.found?data:null;$('customer').hidden=!target;
+ if(target){
+  $('result-email').textContent=target.email;
+  $('member-state').textContent=messages[target.state]||'状態を確認してください';
+  $('email-confirmed').textContent=target.email_confirmed?'確認済み':'未確認（先にメール確認が必要です）';
+  $('next-draw').textContent=target.can_draw?'今すぐ利用できます':date(target.next_available_at);
+  $('last-draw').textContent=date(target.last_draw_at);
+  $('end-date').textContent=target.membership_expires_at?date(target.membership_expires_at)+' から利用不可':'終了予約なし';
+ }
+ controls();
+}
+$('customer-email').addEventListener('input',()=>{revision++;target=null;$('customer').hidden=true;controls();$('message').textContent='';});
+$('lookup').addEventListener('submit',async event=>{
+ event.preventDefault();if(busy)return;
+ const current=++revision;busy=true;target=null;$('customer').hidden=true;controls();$('message').textContent='確認しています…';
+ try{const data=await rpc('awaken_admin_lookup',{p_email:$('customer-email').value.trim()});if(current!==revision)return;render(data);$('message').textContent=data.found?'登録情報を確認してください。':'登録が見つかりません。お客様に先にAWAKENでメール登録してもらってください。';}
+ catch(error){if(current===revision)$('message').textContent=feedback(error);}
+ finally{busy=false;controls();}
+});
+async function change(action){
+ if(busy||!target)return;
+ const current=target;
+ const continuing=['subscriber_ready','subscriber_waiting'].includes(current.state);
+ const description=action==='end_month'?'日本時間の今月末まで利用でき、翌月1日0時に会員資格が終了します。7日間隔は変わりません。':continuing?'月末終了の予約を取り消します。利用回数は増えません。':'入金を確認しましたか？ 会員にするとすぐ1回引け、その後は前回から7日ごとに利用できます。';
+ if(!window.confirm(current.email+'\n\n'+description))return;
+ busy=true;controls();$('message').textContent='変更しています…';
+ try{const data=await rpc('awaken_admin_change',{p_user_id:current.user_id,p_action:action});render(data);$('message').textContent=action==='end_month'?'月末で終了する予約を保存しました。':'会員情報を保存しました。お客様はAWAKENを再読み込みすると確認できます。';}
+ catch(error){target=null;$('customer').hidden=true;$('message').textContent=feedback(error);}
+ finally{busy=false;controls();}
+}
+$('activate').addEventListener('click',()=>change('activate'));
+$('end-month').addEventListener('click',()=>change('end_month'));
+async function initialize(){
+ deny('管理権限を確認しています…');
+ try{
+  try{session=JSON.parse(localStorage.getItem(STORAGE));}catch{}
+  if(!session?.access_token||!session?.refresh_token){deny('先にAWAKENの画面で、管理者のメールアドレスでログインしてください。');return;}
+  const access=await token();await call('/auth/v1/user',{method:'GET',token:access});
+  if(await rpc('awaken_is_admin')!==true){deny('このアカウントには管理権限がありません。');return;}
+  $('gate').hidden=true;$('manager').hidden=false;controls();
+ }catch(error){deny(error.status===401?'AWAKENでログインし直してください。':'管理機能の設定または通信状況を確認してください。管理者の設定が必要な場合があります。');}
+}
+window.addEventListener('storage',event=>{if(event.key===STORAGE){deny('ログイン状態が変更されました。管理画面を開き直してください。');session=null;}});
+window.addEventListener('pageshow',event=>{if(event.persisted)initialize();});
+initialize();

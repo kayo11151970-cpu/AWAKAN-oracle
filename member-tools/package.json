@@ -1,0 +1,13 @@
+{
+  "name": "awaken-membership-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test database.test.js",
+    "test:ui": "node ui-check.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.15",
+    "playwright": "1.64.1"
+  }
+}
