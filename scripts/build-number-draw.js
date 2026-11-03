@@ -13,7 +13,11 @@ export async function build(){
  const cards=validateRegistry(JSON.parse(await readFile(new URL('cards.json',root),'utf8')));
  const file=new URL('index.html',root);const html=await readFile(file,'utf8');
  const data=JSON.stringify(cards).replace(/</g,'\\u003c');
- const output=html.replace(/\/\* CARD_REGISTRY_START \*\/[\s\S]*?\/\* CARD_REGISTRY_END \*\//,()=>`/* CARD_REGISTRY_START */\nconst cardRegistry=${data};\n/* CARD_REGISTRY_END */`);
+ let output=html.replace(/\/\* CARD_REGISTRY_START \*\/[\s\S]*?\/\* CARD_REGISTRY_END \*\//,()=>`/* CARD_REGISTRY_START */\nconst cardRegistry=${data};\n/* CARD_REGISTRY_END */`);
+ if(output.includes('/* AUTH_RUNTIME_START */')){
+  const auth=await readFile(new URL('auth.js',root),'utf8');
+  output=output.replace(/\/\* AUTH_RUNTIME_START \*\/[\s\S]*?\/\* AUTH_RUNTIME_END \*\//,()=>`/* AUTH_RUNTIME_START */\n${auth}\n/* AUTH_RUNTIME_END */`);
+ }
  if(output===html&&!html.includes('const cardRegistry='+data))throw new Error('登録領域がありません');
  if(Buffer.byteLength(output)>1024*1024)throw new Error('プレビュー容量の上限を超えています');
  await writeFile(file,output);console.log('Registered five fields for all 44 cards');
