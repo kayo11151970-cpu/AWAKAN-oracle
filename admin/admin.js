@@ -5,9 +5,9 @@ const $=id=>document.getElementById(id);
 let session=null,target=null,busy=false,revision=0,refreshing=null;
 let authEpoch=0,listRevision=0,listBusy=false,listRows=[];
 const listState={filter:'all',search:'',page:1,pageSize:25,total:0};
-const messages={trial_ready:'無料体験・未使用',trial_used:'無料体験・利用済み',subscriber_ready:'会員・今すぐ利用可能',subscriber_waiting:'会員・次回利用待ち',expired:'会員資格終了',disabled:'利用停止中'};
+const messages={preregistered:'事前登録・初回認証待ち',trial_ready:'無料体験・未使用',trial_used:'無料体験・利用済み',subscriber_ready:'会員・今すぐ利用可能',subscriber_waiting:'会員・次回利用待ち',expired:'会員資格終了',disabled:'利用停止中'};
 function date(value){return value?new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',dateStyle:'medium',timeStyle:'short'}).format(new Date(value))+'（日本時間）':'—';}
-function deny(message){authEpoch++;listRevision++;listBusy=false;clearList();$('customer-email').value='';$('list-email').value='';for(const id of ['result-email','member-state','email-confirmed','next-draw','last-draw','end-source','end-date'])$(id).textContent='';revision++;target=null;$('manager').hidden=true;$('customer').hidden=true;$('gate').hidden=false;$('gate-message').textContent=message;}
+function deny(message){authEpoch++;listRevision++;listBusy=false;clearList();$('preregister-email').value='';$('preregister-message').textContent='';$('customer-email').value='';$('list-email').value='';for(const id of ['result-email','member-state','email-confirmed','next-draw','last-draw','end-source','end-date'])$(id).textContent='';revision++;target=null;$('manager').hidden=true;$('customer').hidden=true;$('gate').hidden=false;$('gate-message').textContent=message;}
 async function call(path,{body,token,method='POST'}={}){
  const response=await fetch(API+path,{method,headers:{apikey:KEY,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},...(body!==undefined?{body:JSON.stringify(body)}:{})});
  const data=await response.json().catch(()=>null);
@@ -28,6 +28,7 @@ function feedback(error){
  return '処理結果を確認できませんでした。検索し直して現在の状態を確認してください。';
 }
 function permissions(record){
+ if(record?.state==='preregistered')return {activate:false,end:false,label:'会員にする'};
  const active=record&&['subscriber_ready','subscriber_waiting'].includes(record.state);
  return {
   activate:Boolean(record?.email_confirmed&&(!active||record.membership_expires_at)),
@@ -37,6 +38,9 @@ function permissions(record){
 }
 function controls(){
  const allowed=permissions(target),locked=busy||listBusy;
+ $('preregister-submit').disabled=locked;$('preregister-email').disabled=locked;
+ $('cancel-preregistration').hidden=target?.state!=='preregistered';$('cancel-preregistration').disabled=locked||target?.state!=='preregistered'||!target?.preregistration_pending;
+ $('activate').hidden=target?.state==='preregistered';$('end-month').hidden=target?.state==='preregistered';
  $('search').disabled=locked;$('customer-email').disabled=locked;
  $('activate').disabled=locked||!allowed.activate;$('end-month').disabled=locked||!allowed.end;
  $('activate').textContent=allowed.label;
@@ -103,13 +107,13 @@ function renderList(){
  const fragment=document.createDocumentFragment();
  const labels=['登録メールアドレス','現在の状態','無料体験','前回引いた日時','次に引ける日時','退会予約','退会予定日','操作'];
  for(const record of listRows){
-  const row=document.createElement('tr');row.dataset.userId=record.user_id;
+  const row=document.createElement('tr');row.dataset.userId=record.user_id||'pending:'+record.email;
   const add=(text,index,className='')=>{const cell=document.createElement('td');cell.dataset.label=labels[index];cell.className=className;cell.textContent=text;row.append(cell);return cell;};
   const email=add(record.email,0,'email-cell');if(!record.email_confirmed){const note=document.createElement('small');note.textContent='メール未確認';email.append(note);}
-  const stateLabel={trial_ready:'無料体験',trial_used:'無料体験',subscriber_ready:'会員',subscriber_waiting:'会員',expired:'終了',disabled:'利用停止'}[record.state]||'確認が必要';
+  const stateLabel={preregistered:'事前登録',trial_ready:'無料体験',trial_used:'無料体験',subscriber_ready:'会員',subscriber_waiting:'会員',expired:'終了',disabled:'利用停止'}[record.state]||'確認が必要';
   const cell=add('',1),badge=document.createElement('span');badge.className='badge';badge.textContent=stateLabel;cell.append(badge);
   add(record.trial_used?'利用済み':'未使用',2);add(compactDate(record.last_draw_at),3);
-  const next=!record.email_confirmed?'メール確認後':record.can_draw?'今すぐ':record.state==='subscriber_waiting'?compactDate(record.next_available_at):record.state==='trial_used'?'体験利用済み':'利用不可';add(next,4);
+  const next=record.state==='preregistered'?'初回認証後':!record.email_confirmed?'メール確認後':record.can_draw?'今すぐ':record.state==='subscriber_waiting'?compactDate(record.next_available_at):record.state==='trial_used'?'体験利用済み':'利用不可';add(next,4);
   const ending=['subscriber_ready','subscriber_waiting'].includes(record.state)&&Boolean(record.membership_expires_at);
   const source=record.membership_end_source==='customer'?'お客様':'管理者';
   add(record.membership_expires_at?(ending?'あり':'終了済み')+'（'+source+'）':'なし',5);
@@ -119,9 +123,10 @@ function renderList(){
    const precise=document.createElement('small');precise.textContent=compactDate(record.membership_expires_at)+'から利用不可';endCell.append(precise);
   }
   const actionCell=add('',7,'row-actions'),buttons=document.createElement('div');buttons.className='row-buttons';const allowed=permissions(record);
-  for(const [action,label,permitted] of [['details','詳細・操作',true],['activate',allowed.label,allowed.activate],['end_month','月末で終了',allowed.end]]){
+  const actions=record.state==='preregistered'?[['details','詳細・操作',true],['cancel_prereg','事前登録を取り消す',Boolean(record.preregistration_pending)]]:[['details','詳細・操作',true],['activate',allowed.label,allowed.activate],['end_month','月末で終了',allowed.end]];
+  for(const [action,label,permitted] of actions){
    const button=document.createElement('button');button.type='button';button.dataset.action=action;button.dataset.allowed=String(permitted);button.textContent=label;if(action!=='activate')button.className='secondary';
-   button.addEventListener('click',()=>{if(action==='details')selectRecord(record);else change(action,record);});buttons.append(button);
+   button.addEventListener('click',()=>{if(action==='details')selectRecord(record);else if(action==='cancel_prereg')cancelPreregistration(record);else change(action,record);});buttons.append(button);
   }
   actionCell.append(buttons);fragment.append(row);
  }
@@ -150,6 +155,28 @@ $('refresh-list').addEventListener('click',()=>{if(!busy&&!listBusy)loadList();}
 $('page-size').addEventListener('change',()=>{if(busy||listBusy)return;listState.pageSize=Number($('page-size').value);listState.page=1;loadList();});
 $('previous-page').addEventListener('click',()=>{if(busy||listBusy||listState.page<=1)return;listState.page--;loadList();});
 $('next-page').addEventListener('click',()=>{if(busy||listBusy||listState.page*listState.pageSize>=listState.total)return;listState.page++;loadList();});
+$('preregister').addEventListener('submit',async event=>{
+ event.preventDefault();if(busy||listBusy)return;
+ const email=$('preregister-email').value.trim(),epoch=authEpoch;
+ if(!window.confirm(email+'\n\n入金を確認済みですか？\n未登録のお客様は初回のメール本人確認後に会員になります。この操作ではメールを送信しません。すでに有効な会員の回数・退会予約は変更しません。'))return;
+ busy=true;controls();$('preregister-message').textContent='事前登録を保存しています…';
+ try{
+  const data=await rpc('awaken_admin_preregister',{p_email:email});if(epoch!==authEpoch)return;
+  revision++;$('customer-email').value=data.email;render(data);await loadList();if(epoch!==authEpoch)return;
+  $('preregister-message').textContent=data.registration_kind==='pending'?'事前登録しました。お客様は同じメールアドレスで初回認証をしてください。メール送信は行っていません。':'会員情報を確認・保存しました。すでに有効な会員の利用回数や退会予約は変更していません。';
+ }catch(error){if(epoch!==authEpoch)return;$('preregister-message').textContent=error.message.includes('INVALID_EMAIL')?'メールアドレスを確認してください。':error.message.includes('REGISTRATION_ALREADY_LINKED')?'このアドレスには既存の登録記録があります。登録者情報を確認してください。':feedback(error);}
+ finally{busy=false;controls();}
+});
+async function cancelPreregistration(record=target){
+ if(busy||listBusy||record?.state!=='preregistered'||!record.preregistration_pending)return;
+ const epoch=authEpoch,email=record.email;
+ if(!window.confirm(email+'\n\n入金確認済みの事前登録を取り消しますか？ アカウントやカード記録は削除しません。本人確認が完了して会員になった後は、この操作では取り消せません。'))return;
+ busy=true;controls();
+ try{await rpc('awaken_admin_cancel_preregistration',{p_email:email});if(epoch!==authEpoch)return;render({found:false});await loadList();if(epoch===authEpoch)$('preregister-message').textContent='事前登録を取り消しました。';}
+ catch(error){if(epoch===authEpoch)$('preregister-message').textContent=feedback(error);}
+ finally{busy=false;controls();}
+}
+$('cancel-preregistration').addEventListener('click',()=>cancelPreregistration());
 async function initialize(){
  deny('管理権限を確認しています…');const epoch=authEpoch;
  try{
