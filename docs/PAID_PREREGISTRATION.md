@@ -2,6 +2,8 @@
 
 ## Rollout and current boundary
 
+Update (2026-11-04): the owner reported SQL Success and the candidate was published to main as `edddcdc0117eb0d4f2a8ec989616391825521ac0`. Live verification of the pre-registration form and the first-mail claim is pending because the owner logged out while standard authentication email was rate-limited. The original rollout checklist below is retained as implementation history; do not reapply old SQL merely to log in.
+
 Prepared on `feat/paid-preregistration-20261104`. Do not change main until the owner has run `supabase/migrations/20261104_paid_preregistration.sql` in the correct project and reported Success. Prior migrations (membership admin, self cancellation, admin list) are already installed according to the owner. Apply new migrations in order; do not rerun older function definitions afterward.
 
 Guide the owner one action at a time. After the SQL succeeds, publish only the tested administrator UI/copies and source files. Customer HTML, card images/texts, session-storage code and existing SQL files are unchanged. The new migration adds a private paid-reservation table and guarded RPCs; the existing status/draw entry points first consume a verified reservation, then run the same membership/cooldown logic as before.

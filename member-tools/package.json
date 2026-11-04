@@ -7,7 +7,8 @@
     "test:ui": "node ui-check.mjs",
     "test:cancellation-ui": "node cancellation-ui.mjs",
     "test:list-ui": "node admin-list-ui.mjs",
-    "test:preregister-ui": "node preregistration-ui.mjs"
+    "test:preregister-ui": "node preregistration-ui.mjs",
+    "test:offline": "node offline-check.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.15",
