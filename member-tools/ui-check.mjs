@@ -19,6 +19,7 @@ async function pageFor({admin=true,loggedIn=true}={}){
   if(path==='/auth/v1/user')body={id:admin?owner:customer,email:admin?'owner@example.com':'customer@example.com'};
   else if(path==='/auth/v1/otp'){assert.equal(req.postDataJSON().create_user,true);body={};}
   else if(path.endsWith('/awaken_is_admin'))body=admin;
+  else if(path.endsWith('/awaken_admin_list'))body={rows:[],total:0,page:1,page_size:25};
   else if(path.endsWith('/awaken_admin_lookup')){
    if(!admin){status=400;body={message:'ADMIN_REQUIRED'};}else body=req.postDataJSON().p_email==='customer@example.com'?record:{found:false};
   }else if(path.endsWith('/awaken_admin_change')){

@@ -1,18 +1,23 @@
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer"><title>AWAKEN 会員管理</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#e3eadc,transparent 70%),#f8f9f4;color:#344c43;font-family:'Yu Mincho','Hiragino Mincho ProN',serif;padding:28px 16px;min-height:100svh}main{max-width:620px;margin:auto;background:#ffffff80;border:1px solid #a58a5140;border-radius:12px;padding:30px 24px}header{font:24px Georgia,serif;letter-spacing:5px}h1{font-size:22px;font-weight:400;margin:24px 0}h2{font-size:17px;font-weight:400;overflow-wrap:anywhere}p,dt,dd,label{font-size:14px;line-height:1.9}p{color:#61705f}input{width:100%;min-height:48px;border:1px solid #a58a5170;background:#fffdf8;border-radius:3px;padding:12px;font-size:16px;color:#344c43}button{min-height:48px;padding:13px 18px;border:1px solid #a58a5170;border-radius:3px;background:linear-gradient(120deg,#a68c53,#89713e);color:#fffdf3;font:15px serif;cursor:pointer;width:100%;margin-top:12px}button:disabled{opacity:.5;cursor:default}button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #344c43;outline-offset:3px}a{color:#816b3d;line-height:2}dt{color:#816b3d;margin-top:15px}dd{margin:2px 0;overflow-wrap:anywhere}.actions{border-top:1px solid #a58a5140;padding-top:12px;margin-top:24px}#end-month{background:#f8f6ed;color:#7d6037}#customer{border-top:1px solid #a58a5140;padding-top:12px;margin-top:24px}#message{min-height:48px}small{display:block;line-height:1.8;color:#61705f;margin-top:16px}[hidden]{display:none!important}@media(max-width:350px){main{padding:24px 16px}}
-</style></head><body><main><header>AWAKEN</header><h1>会員管理</h1><div id="gate"><p id="gate-message" role="status">管理権限を確認しています…</p><a href="../">AWAKENでログインする</a></div><section id="manager" hidden><p>入金を確認したお客様のメールアドレスを入力してください。</p><form id="lookup"><label for="customer-email">お客様のメールアドレス</label><input id="customer-email" type="email" autocomplete="off" required><button id="search" type="submit">登録情報を確認する</button></form><p id="message" role="status" aria-live="polite"></p><section id="customer" hidden><h2 id="result-email"></h2><dl><dt>現在の状態</dt><dd id="member-state"></dd><dt>メール確認</dt><dd id="email-confirmed"></dd><dt>次に引ける日時</dt><dd id="next-draw"></dd><dt>前回引いた日時</dt><dd id="last-draw"></dd><dt>終了予約の設定者</dt><dd id="end-source"></dd><dt>会員終了の予約</dt><dd id="end-date"></dd></dl><div class="actions"><button id="activate" type="button" disabled>会員にする</button><button id="end-month" type="button" disabled>月末で終了</button><small>有効な会員に繰り返し「会員にする」を押しても、引ける回数は増えません。月末終了を予約した後も、月末までは7日間隔で利用できます。</small></div></section><p><a href="../">AWAKENに戻る</a></p></section></main><script>const API='https://mmfsavdfiskhvypkrjnb.supabase.co';
+
+main{max-width:1500px}.page-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.page-heading h1{margin:24px 0}.list-panel{margin:20px 0 30px}.list-tools{display:grid;grid-template-columns:180px minmax(180px,1fr) auto auto;gap:12px;align-items:end}.list-tools label{display:block;font-size:12px}.list-tools button{margin:0;width:auto;min-width:96px}select{min-height:48px;padding:10px;border:1px solid #a58a5170;border-radius:3px;background:#fffdf8;color:#344c43;font-size:16px;width:100%}.list-summary{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}.list-summary p{margin:12px 0}.table-scroll{overflow:auto;border:1px solid #a58a5140;border-radius:6px;max-height:65vh;overscroll-behavior:contain}table{border-collapse:separate;border-spacing:0;width:100%;min-width:1240px;font-family:serif;font-size:12px}th{text-align:left;background:#edf1e8;color:#596a50;position:sticky;top:0;z-index:2;white-space:nowrap;font-weight:400}th,td{padding:13px 12px;border-bottom:1px solid #a58a5128;vertical-align:top}td{line-height:1.8}td.email-cell{min-width:220px;max-width:280px;overflow-wrap:anywhere}td small{font-size:11px;margin-top:4px}.badge{display:inline-block;border:1px solid #a58a5140;border-radius:16px;padding:2px 9px;background:#f4f6ed;white-space:nowrap}.row-actions{position:sticky;right:0;background:#fafbf5;min-width:195px;border-left:1px solid #a58a5128}.row-buttons{display:flex;flex-wrap:wrap;gap:6px;min-width:170px}.row-buttons button{font:12px serif;min-height:36px;padding:6px 10px;margin:0;width:auto;flex:1 1 75px}.row-buttons .secondary{background:#fffdf8;color:#7d6037}.row-buttons button[data-action="details"]{flex-basis:100%}.pagination{display:flex;justify-content:flex-end;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0}.pagination button{width:auto;min-height:40px;margin:0;padding:8px 14px}.pagination label{display:flex;align-items:center;gap:8px;font-size:12px}.pagination select{width:85px;min-height:40px}#list-message{min-height:26px}#lookup-section{border-top:1px solid #a58a5140;padding-top:24px;max-width:780px}#lookup{display:flex;align-items:end;gap:12px;flex-wrap:wrap}#lookup label{width:100%}#lookup input{flex:1 1 240px;width:auto}#lookup button{flex:0 0 auto;width:auto;margin:0}#customer .actions{display:flex;gap:12px;flex-wrap:wrap}#customer .actions button{flex:1 1 200px;width:auto}#customer .actions small{flex-basis:100%}#customer h2:focus{outline:2px solid #a58a5170;outline-offset:4px}.sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:760px){body{padding:16px 10px}main{padding:24px 16px}.list-tools{grid-template-columns:1fr 1fr}.list-tools .email-search{grid-column:1/-1}.list-tools .status-filter{grid-column:1/-1}.list-tools button{width:100%}.table-scroll{border:0;max-height:none;overflow:visible}table{min-width:0;display:block}thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}tbody{display:block}tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border:1px solid #a58a5140;border-radius:6px;margin-bottom:14px;background:#fffdf880;padding:8px}td{display:block;min-width:0;border:0;padding:7px 8px;overflow-wrap:anywhere}td::before{content:attr(data-label);display:block;font-size:10px;color:#816b3d;margin-bottom:4px}td.email-cell{min-width:0;max-width:none;grid-column:1/-1;font-size:14px}.row-actions{position:static;grid-column:1/-1;min-width:0;background:transparent;border-left:0}.row-buttons{min-width:0}.row-buttons button{min-height:44px}.pagination{justify-content:center}#lookup button{width:100%}#lookup input{width:100%}}
+</style></head><body><main><header>AWAKEN</header><h1>会員管理</h1><div id="gate"><p id="gate-message" role="status">管理権限を確認しています…</p><a href="../">AWAKENでログインする</a></div><section id="manager" hidden><section class="list-panel" aria-labelledby="registrants-heading"><h2 id="registrants-heading">登録者一覧</h2><form id="list-filters" class="list-tools"><label class="status-filter" for="status-filter">表示する状態<select id="status-filter"><option value="all">すべての登録者</option><option value="members">会員だけ</option><option value="trial">無料体験</option><option value="ending">退会予定</option><option value="ended">会員資格終了</option><option value="disabled">利用停止</option></select></label><label class="email-search" for="list-email">メールアドレスで絞り込み<input id="list-email" type="search" autocomplete="off" maxlength="254" placeholder="メールアドレスの一部でも検索できます"></label><button id="apply-filter" type="submit">絞り込む</button><button id="refresh-list" type="button">最新に更新</button></form><div class="list-summary"><p id="list-count" aria-live="polite">登録者を確認しています。</p><p>日時は日本時間です。</p></div><p id="list-message" role="status" aria-live="polite"></p><div class="table-scroll" tabindex="0" role="region" aria-label="登録者一覧。横スクロールできます"><table><caption class="sr-only">登録者の状態、利用状況、退会予約と管理操作</caption><thead><tr><th scope="col">登録メールアドレス</th><th scope="col">現在の状態</th><th scope="col">無料体験</th><th scope="col">前回引いた日時</th><th scope="col">次に引ける日時</th><th scope="col">退会予約</th><th scope="col">退会予定日</th><th scope="col">操作</th></tr></thead><tbody id="registrants"></tbody></table></div><nav class="pagination" aria-label="一覧ページ"><label for="page-size">表示件数<select id="page-size"><option value="25">25件</option><option value="50">50件</option><option value="100">100件</option></select></label><button id="previous-page" type="button" disabled>前へ</button><span id="page-label">1 / 1</span><button id="next-page" type="button" disabled>次へ</button></nav></section><section id="lookup-section"><h2>個別の登録情報・操作</h2><p>一覧の各行から操作できます。メールアドレスを指定して確認する方法も引き続き使えます。</p><form id="lookup"><label for="customer-email">お客様のメールアドレス</label><input id="customer-email" type="email" autocomplete="off" required><button id="search" type="submit">登録情報を確認する</button></form><p id="message" role="status" aria-live="polite"></p><section id="customer" hidden><h2 id="result-email" tabindex="-1"></h2><dl><dt>現在の状態</dt><dd id="member-state"></dd><dt>メール確認</dt><dd id="email-confirmed"></dd><dt>次に引ける日時</dt><dd id="next-draw"></dd><dt>前回引いた日時</dt><dd id="last-draw"></dd><dt>終了予約の設定者</dt><dd id="end-source"></dd><dt>会員終了の予約</dt><dd id="end-date"></dd></dl><div class="actions"><button id="activate" type="button" disabled>会員にする</button><button id="end-month" type="button" disabled>月末で終了</button><small>有効な会員に繰り返し「会員にする」を押しても、引ける回数は増えません。月末終了を予約した後も、月末までは7日間隔で利用できます。</small></div></section></section><p><a href="../">AWAKENに戻る</a></p></section></main><script>const API='https://mmfsavdfiskhvypkrjnb.supabase.co';
 const KEY='sb_publishable_L29n6t4Rw-_THcwQQRBNaw_5D78IwDK';
 const STORAGE='awaken-auth-v1';
 const $=id=>document.getElementById(id);
 let session=null,target=null,busy=false,revision=0,refreshing=null;
+let authEpoch=0,listRevision=0,listBusy=false,listRows=[];
+const listState={filter:'all',search:'',page:1,pageSize:25,total:0};
 const messages={trial_ready:'無料体験・未使用',trial_used:'無料体験・利用済み',subscriber_ready:'会員・今すぐ利用可能',subscriber_waiting:'会員・次回利用待ち',expired:'会員資格終了',disabled:'利用停止中'};
 function date(value){return value?new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',dateStyle:'medium',timeStyle:'short'}).format(new Date(value))+'（日本時間）':'—';}
-function deny(message){revision++;target=null;$('manager').hidden=true;$('customer').hidden=true;$('gate').hidden=false;$('gate-message').textContent=message;}
+function deny(message){authEpoch++;listRevision++;listBusy=false;clearList();$('customer-email').value='';$('list-email').value='';for(const id of ['result-email','member-state','email-confirmed','next-draw','last-draw','end-source','end-date'])$(id).textContent='';revision++;target=null;$('manager').hidden=true;$('customer').hidden=true;$('gate').hidden=false;$('gate-message').textContent=message;}
 async function call(path,{body,token,method='POST'}={}){
  const response=await fetch(API+path,{method,headers:{apikey:KEY,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},...(body!==undefined?{body:JSON.stringify(body)}:{})});
  const data=await response.json().catch(()=>null);
- if(!response.ok){const error=new Error(data?.message||data?.msg||'REQUEST_FAILED');error.status=response.status;throw error;}return data;
+ if(!response.ok){const error=new Error(data?.message||data?.msg||'REQUEST_FAILED');error.status=response.status;error.code=data?.code;throw error;}return data;
 }
 async function token(){
  if(!session)throw new Error('LOGIN_REQUIRED');
@@ -28,13 +33,25 @@ function feedback(error){
  if(error.message.includes('NOT_ACTIVE_SUBSCRIBER'))return '現在は有効な会員ではありません。メールアドレスを検索し直してください。';
  return '処理結果を確認できませんでした。検索し直して現在の状態を確認してください。';
 }
-function controls(){
- const active=target&&['subscriber_ready','subscriber_waiting'].includes(target.state);
- $('search').disabled=busy;$('customer-email').disabled=busy;
- $('activate').disabled=busy||!target?.email_confirmed||(active&&!target.membership_expires_at);
- $('end-month').disabled=busy||!target?.email_confirmed||!active||Boolean(target?.membership_expires_at&&target.membership_end_source!=='customer');
- $('activate').textContent=active?(target.membership_expires_at?'終了予約を取り消す':'会員です'):'会員にする';
+function permissions(record){
+ const active=record&&['subscriber_ready','subscriber_waiting'].includes(record.state);
+ return {
+  activate:Boolean(record?.email_confirmed&&(!active||record.membership_expires_at)),
+  end:Boolean(record?.email_confirmed&&active&&(!record.membership_expires_at||record.membership_end_source==='customer')),
+  label:active?(record.membership_expires_at?'終了予約を取り消す':'会員です'):'会員にする'
+ };
 }
+function controls(){
+ const allowed=permissions(target),locked=busy||listBusy;
+ $('search').disabled=locked;$('customer-email').disabled=locked;
+ $('activate').disabled=locked||!allowed.activate;$('end-month').disabled=locked||!allowed.end;
+ $('activate').textContent=allowed.label;
+ for(const id of ['apply-filter','refresh-list','page-size'])$(id).disabled=locked;
+ $('previous-page').disabled=locked||listState.page<=1;
+ $('next-page').disabled=locked||listState.page*listState.pageSize>=listState.total;
+ for(const button of $('registrants').querySelectorAll('button'))button.disabled=locked||button.dataset.allowed!=='true';
+}
+
 function render(data){
  target=data.found?data:null;$('customer').hidden=!target;
  if(target){
@@ -50,33 +67,104 @@ function render(data){
 }
 $('customer-email').addEventListener('input',()=>{revision++;target=null;$('customer').hidden=true;controls();$('message').textContent='';});
 $('lookup').addEventListener('submit',async event=>{
- event.preventDefault();if(busy)return;
+ event.preventDefault();if(busy||listBusy)return;
  const current=++revision;busy=true;target=null;$('customer').hidden=true;controls();$('message').textContent='確認しています…';
  try{const data=await rpc('awaken_admin_lookup',{p_email:$('customer-email').value.trim()});if(current!==revision)return;render(data);$('message').textContent=data.found?'登録情報を確認してください。':'登録が見つかりません。お客様に先にAWAKENでメール登録してもらってください。';}
  catch(error){if(current===revision)$('message').textContent=feedback(error);}
  finally{busy=false;controls();}
 });
-async function change(action){
- if(busy||!target)return;
- const current=target;
+async function change(action,selected=target){
+ if(busy||listBusy||!selected)return;
+ const current={...selected};const epoch=authEpoch;
+ if(!(action==='activate'?permissions(current).activate:permissions(current).end))return;
  const continuing=['subscriber_ready','subscriber_waiting'].includes(current.state);
  const description=action==='end_month'?'日本時間の今月末まで利用でき、翌月1日0時に会員資格が終了します。7日間隔は変わりません。この管理者の終了予約は、お客様からは取り消せなくなります。':continuing?'月末終了の予約を取り消します。利用回数は増えません。':'入金を確認しましたか？ 会員にするとすぐ1回引け、その後は前回から7日ごとに利用できます。';
  if(!window.confirm(current.email+'\n\n'+description))return;
  busy=true;controls();$('message').textContent='変更しています…';
- try{const data=await rpc('awaken_admin_change',{p_user_id:current.user_id,p_action:action});render(data);$('message').textContent=action==='end_month'?'月末で終了する予約を保存しました。':'会員情報を保存しました。お客様はAWAKENを再読み込みすると確認できます。';}
- catch(error){target=null;$('customer').hidden=true;$('message').textContent=feedback(error);}
+ try{
+  const data=await rpc('awaken_admin_change',{p_user_id:current.user_id,p_action:action});if(epoch!==authEpoch)return;
+  revision++;$('customer-email').value=data.email;render(data);
+  const notice=action==='end_month'?'月末で終了する予約を保存しました。':'会員情報を保存しました。お客様はAWAKENを再読み込みすると確認できます。';
+  const refreshed=await loadList();if(epoch!==authEpoch)return;
+  $('message').textContent=notice;
+  $('list-message').textContent=data.email+'：'+notice+(refreshed?'':' 一覧を再取得できなかったため、「最新に更新」で確認してください。');
+ }
+ catch(error){if(epoch!==authEpoch)return;target=null;$('customer').hidden=true;const message=feedback(error);$('message').textContent=message;$('list-message').textContent=message;}
  finally{busy=false;controls();}
 }
 $('activate').addEventListener('click',()=>change('activate'));
 $('end-month').addEventListener('click',()=>change('end_month'));
+function clearList(){
+ listRows=[];listState.total=0;$('registrants').replaceChildren();$('list-count').textContent='';$('page-label').textContent='1 / 1';$('list-message').textContent='';
+}
+function compactDate(value){
+ return value?new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(value)):'—';
+}
+function selectRecord(record){
+ if(busy||listBusy)return;
+ revision++;$('customer-email').value=record.email;render(record);$('message').textContent='一覧で選んだ登録者の情報です。';
+ $('result-email').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'center'});$('result-email').focus({preventScroll:true});
+}
+function renderList(){
+ const fragment=document.createDocumentFragment();
+ const labels=['登録メールアドレス','現在の状態','無料体験','前回引いた日時','次に引ける日時','退会予約','退会予定日','操作'];
+ for(const record of listRows){
+  const row=document.createElement('tr');row.dataset.userId=record.user_id;
+  const add=(text,index,className='')=>{const cell=document.createElement('td');cell.dataset.label=labels[index];cell.className=className;cell.textContent=text;row.append(cell);return cell;};
+  const email=add(record.email,0,'email-cell');if(!record.email_confirmed){const note=document.createElement('small');note.textContent='メール未確認';email.append(note);}
+  const stateLabel={trial_ready:'無料体験',trial_used:'無料体験',subscriber_ready:'会員',subscriber_waiting:'会員',expired:'終了',disabled:'利用停止'}[record.state]||'確認が必要';
+  const cell=add('',1),badge=document.createElement('span');badge.className='badge';badge.textContent=stateLabel;cell.append(badge);
+  add(record.trial_used?'利用済み':'未使用',2);add(compactDate(record.last_draw_at),3);
+  const next=!record.email_confirmed?'メール確認後':record.can_draw?'今すぐ':record.state==='subscriber_waiting'?compactDate(record.next_available_at):record.state==='trial_used'?'体験利用済み':'利用不可';add(next,4);
+  const ending=['subscriber_ready','subscriber_waiting'].includes(record.state)&&Boolean(record.membership_expires_at);
+  const source=record.membership_end_source==='customer'?'お客様':'管理者';
+  add(record.membership_expires_at?(ending?'あり':'終了済み')+'（'+source+'）':'なし',5);
+  const endCell=add('—',6);
+  if(record.membership_expires_at){
+   endCell.textContent=new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(new Date(record.membership_expires_at).getTime()-1))+'まで';
+   const precise=document.createElement('small');precise.textContent=compactDate(record.membership_expires_at)+'から利用不可';endCell.append(precise);
+  }
+  const actionCell=add('',7,'row-actions'),buttons=document.createElement('div');buttons.className='row-buttons';const allowed=permissions(record);
+  for(const [action,label,permitted] of [['details','詳細・操作',true],['activate',allowed.label,allowed.activate],['end_month','月末で終了',allowed.end]]){
+   const button=document.createElement('button');button.type='button';button.dataset.action=action;button.dataset.allowed=String(permitted);button.textContent=label;if(action!=='activate')button.className='secondary';
+   button.addEventListener('click',()=>{if(action==='details')selectRecord(record);else change(action,record);});buttons.append(button);
+  }
+  actionCell.append(buttons);fragment.append(row);
+ }
+ $('registrants').replaceChildren(fragment);
+ const pages=Math.max(1,Math.ceil(listState.total/listState.pageSize));$('page-label').textContent=listState.page+' / '+pages;
+ const first=listState.total?(listState.page-1)*listState.pageSize+1:0,last=Math.min(listState.page*listState.pageSize,listState.total);
+ $('list-count').textContent='全'+listState.total+'件'+(listState.total?' ／ '+first+'〜'+last+'件を表示':'');controls();
+}
+async function loadList(){
+ const epoch=authEpoch,current=++listRevision;listBusy=true;controls();$('list-message').textContent='登録者一覧を読み込んでいます…';
+ try{
+  const data=await rpc('awaken_admin_list',{p_filter:listState.filter,p_search:listState.search,p_page:listState.page,p_page_size:listState.pageSize});
+  if(epoch!==authEpoch||current!==listRevision)return false;
+  if(!Array.isArray(data?.rows)||!Number.isInteger(data.total)||data.total<0)throw new Error('INVALID_LIST');
+  listState.total=data.total;
+  const lastPage=Math.max(1,Math.ceil(data.total/listState.pageSize));
+  if(listState.page>lastPage){listState.page=lastPage;return await loadList();}
+  listRows=data.rows;renderList();$('list-message').textContent=data.total?'':'条件に一致する登録者はいません。';return true;
+ }catch(error){
+  if(epoch!==authEpoch||current!==listRevision)return false;
+  clearList();$('list-message').textContent=error.code==='PGRST202'?'一覧表示の追加設定が完了していません。個別のメール検索は引き続き利用できます。':feedback(error);return false;
+ }finally{if(current===listRevision){listBusy=false;controls();}}
+}
+$('list-filters').addEventListener('submit',event=>{event.preventDefault();if(busy||listBusy)return;listState.filter=$('status-filter').value;listState.search=$('list-email').value.trim();listState.page=1;loadList();});
+$('refresh-list').addEventListener('click',()=>{if(!busy&&!listBusy)loadList();});
+$('page-size').addEventListener('change',()=>{if(busy||listBusy)return;listState.pageSize=Number($('page-size').value);listState.page=1;loadList();});
+$('previous-page').addEventListener('click',()=>{if(busy||listBusy||listState.page<=1)return;listState.page--;loadList();});
+$('next-page').addEventListener('click',()=>{if(busy||listBusy||listState.page*listState.pageSize>=listState.total)return;listState.page++;loadList();});
 async function initialize(){
- deny('管理権限を確認しています…');
+ deny('管理権限を確認しています…');const epoch=authEpoch;
  try{
   try{session=JSON.parse(localStorage.getItem(STORAGE));}catch{}
   if(!session?.access_token||!session?.refresh_token){deny('先にAWAKENの画面で、管理者のメールアドレスでログインしてください。');return;}
   const access=await token();await call('/auth/v1/user',{method:'GET',token:access});
-  if(await rpc('awaken_is_admin')!==true){deny('このアカウントには管理権限がありません。');return;}
-  $('gate').hidden=true;$('manager').hidden=false;controls();
+  const admin=await rpc('awaken_is_admin');if(epoch!==authEpoch)return;
+  if(admin!==true){deny('このアカウントには管理権限がありません。');return;}
+  $('gate').hidden=true;$('manager').hidden=false;controls();await loadList();
  }catch(error){deny(error.status===401?'AWAKENでログインし直してください。':'管理機能の設定または通信状況を確認してください。管理者の設定が必要な場合があります。');}
 }
 window.addEventListener('storage',event=>{if(event.key===STORAGE){deny('ログイン状態が変更されました。管理画面を開き直してください。');session=null;}});
